@@ -1,7 +1,7 @@
 script_name = "Clipping/shape bonanza"
 script_description = "Clipping and shape bonanza utilizing Yutils.lua"
 script_author = "dark_star90"
-script_version = "2.5"
+script_version = "2.6"
 submenu="_darkis crappy scripts"
 
 Yutils = include("Yutils.lua")
@@ -84,9 +84,28 @@ end
 
 function text_shaper(subs,sel)
 	text_shape = Yutils.decode.create_font(fontname, bold, italic, underline, strikeout, fontsize, scale_x / 100, scale_y / 100, spacing).text_to_shape(line.text_stripped)
+	if xzerr ~= 0 or yzerr ~= 0 then --fax and fay support
+		fa_x = xzerr * scale_x/scale_y
+		fa_y = yzerr * scale_y/scale_x
+		MATRIX = Yutils.math.create_matrix()
+		text_shape = Yutils.shape.transform(text_shape, MATRIX.multiply({1,fa_y,0,0,
+																		 fa_x,1,0,0,
+																		 0,0,1,0,
+																		 0,0,0,1}))
+	end
 	if rotation ~= 0 then 
 		MATRIX = Yutils.math.create_matrix()
-		text_shape = Yutils.shape.transform(text_shape , MATRIX.rotate("z", rotation))
+		text_shape = Yutils.shape.transform(text_shape, MATRIX.rotate("z", rotation))
+		if shadow ~= 0 then aegisub.log("Warning: \\shad and \\frz at the same time may shift the position slightly, manual correction could be needed.\n\n") end
+	end
+	if x_rota ~= 0 then
+		MATRIX = Yutils.math.create_matrix()
+		text_shape = Yutils.shape.transform(text_shape, MATRIX.rotate("x", x_rota))
+		if shadow ~= 0 then aegisub.log("Warning: \\shad and \\frz at the same time may shift the position slightly, manual correction could be needed.\n\n") end
+	end
+	if y_rota ~= 0 then
+		MATRIX = Yutils.math.create_matrix()
+		text_shape = Yutils.shape.transform(text_shape, MATRIX.rotate("y", y_rota))
 		if shadow ~= 0 then aegisub.log("Warning: \\shad and \\frz at the same time may shift the position slightly, manual correction could be needed.\n\n") end
 	end
 	--testing
@@ -121,9 +140,28 @@ function border_to_shape(subs,sel)
 	end
 	text_shape = outliner(text_shape, border, border, join_type)
 	--shape move+rotation
+	if xzerr ~= 0 or yzerr ~= 0 then --fax and fay support
+		fa_x = xzerr * scale_x/scale_y
+		fa_y = yzerr * scale_y/scale_x
+		MATRIX = Yutils.math.create_matrix()
+		text_shape = Yutils.shape.transform(text_shape, MATRIX.multiply({1,fa_y,0,0,
+																		 fa_x,1,0,0,
+																		 0,0,1,0,
+																		 0,0,0,1}))
+	end
 	if rotation ~= 0 then 
 		MATRIX = Yutils.math.create_matrix()
 		text_shape = Yutils.shape.transform(text_shape , MATRIX.rotate("z", rotation))
+	end
+	if x_rota ~= 0 then
+		MATRIX = Yutils.math.create_matrix()
+		text_shape = Yutils.shape.transform(text_shape, MATRIX.rotate("x", x_rota))
+		if shadow ~= 0 then aegisub.log("Warning: \\shad and \\frz at the same time may shift the position slightly, manual correction could be needed.\n\n") end
+	end
+	if y_rota ~= 0 then
+		MATRIX = Yutils.math.create_matrix()
+		text_shape = Yutils.shape.transform(text_shape, MATRIX.rotate("y", y_rota))
+		if shadow ~= 0 then aegisub.log("Warning: \\shad and \\frz at the same time may shift the position slightly, manual correction could be needed.\n\n") end
 	end
 	text_shape3 = Yutils.shape.move(text_shape, xdigit, ydigit)
 end
@@ -320,7 +358,7 @@ karaskel.preproc_line(subtitles, meta, styles, line)
 		scale_x = style.scale_x
 		scale_y = style.scale_y
 		spacing = style.spacing
-		if style.spacing ~= 0 then aegisub.log("Use \\fsp you stupid shit :V\n") end
+		if style.spacing ~= 0 then aegisub.log("Fontspacing is buggy (at least for me), works only with 0\n") end
 		border = style.outline
 		shadow = style.shadow
 		--Override Tags
@@ -368,11 +406,23 @@ karaskel.preproc_line(subtitles, meta, styles, line)
 			frz = line.text:match("\\frz[%d%.%-]+"):gsub("\\frz","")
 			rotation = tonumber(frz)
 		else rotation = 0 end
+		if line.text:match("\\frx[%d%.%-]+") ~= nil then 
+			frx = line.text:match("\\frx[%d%.%-]+"):gsub("\\frx","")
+			x_rota = tonumber(frx)
+		else x_rota = 0 end
+		if line.text:match("\\fry[%d%.%-]+") ~= nil then 
+			fry = line.text:match("\\fry[%d%.%-]+"):gsub("\\fry","")
+			aegisub.log(fry)
+			y_rota = tonumber(fry)
+		else y_rota = 0 end
 		if line.text:match("\\fax[%d%.%-]+") ~= nil then 
 			fax = line.text:match("\\fax[%d%.%-]+"):gsub("\\fax","")
-			--aegisub.log(fax)
 			xzerr = tonumber(fax)
-		end
+		else xzerr = 0 end
+		if line.text:match("\\fay[%d%.%-]+") ~= nil then 
+			fay = line.text:match("\\fay[%d%.%-]+"):gsub("\\fay","")
+			yzerr = tonumber(fay)
+		else yzerr = 0 end
 		if line.text:match("\\blur[%d%.%-]+") ~= nil then 
 			blurred = line.text:match("\\blur[%d%.%-]+"):gsub("\\blur","")
 			blur = tonumber(blurred)
